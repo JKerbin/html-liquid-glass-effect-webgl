@@ -43,9 +43,9 @@ Currently, normal calculations are performed on the fly using JavaScript and GPU
 
 [Bilibili](https://www.bilibili.com/video/BV1vwM3zFESr)
 
+[X](https://x.com/Rxing5/status/1932612927586250974)
 
 
 ## Credits
 
 Apple WWDC 2025 Liquid Glass UI.
-
