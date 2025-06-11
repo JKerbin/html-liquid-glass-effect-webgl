@@ -37,7 +37,7 @@ Currently, normal calculations are performed on the fly using JavaScript and GPU
 
 ## Live Demo
 
-[View the live demo](https://your-demo-link-here)
+[View the live demo](https://rxing365.github.io/html-liquid-glass-effect-webgl/)
 
 
 
