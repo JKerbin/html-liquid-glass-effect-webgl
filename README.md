@@ -29,13 +29,9 @@ Currently, normal calculations are performed on the fly using JavaScript and GPU
 
 
 
-## Screenshots
+## Screenshot
 
 ![截屏2025-06-10 20 58 13](https://github.com/user-attachments/assets/ae779dfd-5e45-4dd2-9a91-cda333405475)
-
-![截屏2025-06-11 09 22 28](https://github.com/user-attachments/assets/98063212-7c54-400b-a0db-c7f76fb37eb4)
-
-
 
 
 
