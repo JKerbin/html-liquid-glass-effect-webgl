@@ -25,7 +25,7 @@ This project showcases a glass-like UI component with real-time refraction, refl
 
 ## Optimization Notes
 
-Currently, normal calculations are performed on the fly using JavaScript and GPU shaders to help users learn and explore normal generation techniques. In a production environment, if your component shapes are fixed, you can precompute normal maps and use them with SVG filters. This eliminates the need for WebGL and JavaScript, just CSS.
+Currently, normal calculations are performed on the fly using JavaScript and GPU shaders to explore normal generation techniques. If your component shapes are fixed, you can precompute normal maps and use them with SVG filters. This eliminates the need for WebGL and JavaScript, just CSS.
 
 
 
@@ -33,7 +33,8 @@ Currently, normal calculations are performed on the fly using JavaScript and GPU
 
 ![截屏2025-06-10 20 58 13](https://github.com/user-attachments/assets/ae779dfd-5e45-4dd2-9a91-cda333405475)
 
-![截屏2025-06-11 09 21 09](https://github.com/user-attachments/assets/3d949c59-b639-4066-850e-83d69d7e6c34)
+![截屏2025-06-11 09 22 28](https://github.com/user-attachments/assets/98063212-7c54-400b-a0db-c7f76fb37eb4)
+
 
 
 
