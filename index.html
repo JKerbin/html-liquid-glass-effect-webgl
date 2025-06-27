@@ -5,71 +5,93 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebGL Glass Refraction Demo</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #333; color: white; font-family: sans-serif; }
-        canvas { display: block; }
-        .controls {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px;
-            border-radius: 5px;
-            z-index: 10;
-            max-height: 90vh;
-            overflow-y: auto;
+        body { 
+            margin: 0; 
+            padding: 0;
+            background-image: url('background.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            font-family: sans-serif; 
         }
-        .controls label { display: block; margin-bottom: 5px; margin-top:10px; }
-        .controls input[type="range"] { width: 150px; }
-        .controls input[type="file"] { margin-top: 10px; }
-        .controls input[type="checkbox"] { margin-right: 5px; }
+        
+        .page-content {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+        
+        .glass-container {
+            position: absolute;
+            width: 150px;
+            height: 170px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 32px;
+            overflow: hidden;
+            cursor: move;
+            z-index: 10;
+        }
+        
+        .glass-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        /* 隐藏的截图canvas */
+        #screenshotCanvas {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            pointer-events: none;
+        }
+        
+        /* 示例页面内容 */
+        .demo-content {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 2;
+        }
+        
+        .demo-content h1 {
+            font-size: 2.5em;
+            margin: 0 0 20px 0;
+        }
+        
+        .demo-content p {
+            font-size: 1.2em;
+            line-height: 1.6;
+            max-width: 600px;
+        }
     </style>
 </head>
 <body>
-    <div class="controls">
-        <label for="imageUpload">Background Image:</label>
-        <input type="file" id="imageUpload" accept="image/*">
-
-        <label for="glassWidth">Width: <span id="widthValue">150</span>px</label>
-        <input type="range" id="glassWidth" min="50" max="500" value="150">
-
-        <label for="glassHeight">Height: <span id="heightValue">170</span>px</label>
-        <input type="range" id="glassHeight" min="50" max="500" value="170">
-
-        <label for="cornerRadius">Corner Radius: <span id="radiusValue">32</span>px</label>
-        <input type="range" id="cornerRadius" min="0" max="250" value="32">
-        
-        <label for="ior">IOR (Refraction): <span id="iorValue">1.1</span></label>
-        <input type="range" id="ior" min="0.8" max="1.5" value="1.1" step="0.01">
-
-        <label for="glassThickness">Thickness/Strength: <span id="thicknessValue">41</span></label>
-        <input type="range" id="glassThickness" min="0" max="50" value="41" step="0.1">
-
-        <label for="normalStrength">Normal Strength: <span id="normalStrengthValue">6.4</span></label>
-        <input type="range" id="normalStrength" min="0.1" max="10" value="6.4" step="0.1">
-
-        <label for="displacementScale">Displacement Scale: <span id="displacementScaleValue">1.0</span></label>
-        <input type="range" id="displacementScale" min="0.1" max="5" value="1.0" step="0.1">
-        
-        <label for="heightBlurFactor">Height Transition (px): <span id="heightBlurFactorValue">8.0</span></label>
-        <input type="range" id="heightBlurFactor" min="0.1" max="20" value="8.0" step="0.1">
-
-        <label for="sminSmoothing">SDF Smoothing (k): <span id="sminSmoothingValue">20.0</span></label>
-        <input type="range" id="sminSmoothing" min="0.0" max="20.0" value="20.0" step="0.1">
-
-        <label for="blurRadius">Blur Radius (Frosted): <span id="blurRadiusValue">0.0</span></label>
-        <input type="range" id="blurRadius" min="0.0" max="5.0" value="0.0" step="0.1">
-
-        <label for="highlightWidth">Highlight Width: <span id="highlightWidthValue">3.5</span></label>
-        <input type="range" id="highlightWidth" min="0.0" max="5" value="3.5" step="0.1">
-
-        <div>
-            <input type="checkbox" id="showNormalsCheckbox">
-            <label for="showNormalsCheckbox" style="display: inline;">Show Normals</label>
+    <div class="page-content">
+        <!-- 示例页面内容 -->
+        <div class="demo-content">
+            <h1>WebGL 玻璃折射效果</h1>
+            <p>这是一个演示页面，展示了如何将页面内容截图并应用玻璃折射效果。</p>
+            <p>你可以拖拽玻璃块来查看不同区域的折射效果。</p>
+            <p>玻璃块会实时截取其覆盖区域的页面内容，并应用物理准确的光线折射计算。</p>
         </div>
+        
+        <!-- 玻璃容器 -->
+        <div class="glass-container" id="glassContainer">
+            <canvas class="glass-canvas" id="glCanvas"></canvas>
+        </div>
+        
+        <!-- 隐藏的截图canvas -->
+        <canvas id="screenshotCanvas"></canvas>
     </div>
 
-    <canvas id="glCanvas"></canvas>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

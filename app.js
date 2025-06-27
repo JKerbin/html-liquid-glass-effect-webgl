@@ -1,134 +1,141 @@
+// ========== WebGL 初始化 ==========
+// 获取HTML中的canvas元素，这是WebGL渲染的目标
 const canvas = document.getElementById('glCanvas');
+const glassContainer = document.getElementById('glassContainer');
+const screenshotCanvas = document.getElementById('screenshotCanvas');
+
+// 获取WebGL渲染上下文，这是所有WebGL操作的入口点
 const gl = canvas.getContext('webgl');
 
+// 检查浏览器是否支持WebGL
 if (!gl) {
     alert('WebGL not supported!');
     throw new Error('WebGL not supported');
 }
 
-// --- Control Inputs ---
-const glassWidthSlider = document.getElementById('glassWidth');
-const glassHeightSlider = document.getElementById('glassHeight');
-const cornerRadiusSlider = document.getElementById('cornerRadius');
-const iorSlider = document.getElementById('ior');
-const imageUpload = document.getElementById('imageUpload');
-const glassThicknessSlider = document.getElementById('glassThickness');
-const normalStrengthSlider = document.getElementById('normalStrength');
-const displacementScaleSlider = document.getElementById('displacementScale');
-const heightBlurFactorSlider = document.getElementById('heightBlurFactor');
-const sminSmoothingSlider = document.getElementById('sminSmoothing'); // New slider
-const showNormalsCheckbox = document.getElementById('showNormalsCheckbox');
-const blurRadiusSlider = document.getElementById('blurRadius'); // New slider
-const highlightWidthSlider = document.getElementById('highlightWidth'); // New slider
+// --- Glass Parameters (Fixed Values) ---
 
-const widthValueSpan = document.getElementById('widthValue');
-const heightValueSpan = document.getElementById('heightValue');
-const radiusValueSpan = document.getElementById('radiusValue');
-const iorValueSpan = document.getElementById('iorValue');
-const thicknessValueSpan = document.getElementById('thicknessValue');
-const normalStrengthValueSpan = document.getElementById('normalStrengthValue');
-const displacementScaleValueSpan = document.getElementById('displacementScaleValue');
-const heightBlurFactorValueSpan = document.getElementById('heightBlurFactorValue');
-const sminSmoothingValueSpan = document.getElementById('sminSmoothingValue'); // New span
-const blurRadiusValueSpan = document.getElementById('blurRadiusValue'); // New span
-const highlightWidthValueSpan = document.getElementById('highlightWidthValue'); // New span
-
-let glassWidth = parseFloat(glassWidthSlider.value);
-let glassHeight = parseFloat(glassHeightSlider.value);
-let cornerRadius = parseFloat(cornerRadiusSlider.value);
-let ior = parseFloat(iorSlider.value);
-let glassThickness = parseFloat(glassThicknessSlider.value);
-let normalStrength = parseFloat(normalStrengthSlider.value);
-let displacementScale = parseFloat(displacementScaleSlider.value);
-let heightBlurFactor = parseFloat(heightBlurFactorSlider.value);
-let sminSmoothing = parseFloat(sminSmoothingSlider.value); // New variable
-let blurRadius = parseFloat(blurRadiusSlider.value); // New variable
-let highlightWidth = parseFloat(highlightWidthSlider.value); // New variable
-let showNormals = showNormalsCheckbox.checked;
-
-glassWidthSlider.oninput = () => { glassWidth = parseFloat(glassWidthSlider.value); widthValueSpan.textContent = glassWidth; };
-glassHeightSlider.oninput = () => { glassHeight = parseFloat(glassHeightSlider.value); heightValueSpan.textContent = glassHeight; };
-cornerRadiusSlider.oninput = () => { cornerRadius = parseFloat(cornerRadiusSlider.value); radiusValueSpan.textContent = cornerRadius; };
-iorSlider.oninput = () => { ior = parseFloat(iorSlider.value); iorValueSpan.textContent = ior; };
-glassThicknessSlider.oninput = () => { glassThickness = parseFloat(glassThicknessSlider.value); thicknessValueSpan.textContent = glassThickness;};
-normalStrengthSlider.oninput = () => { normalStrength = parseFloat(normalStrengthSlider.value); normalStrengthValueSpan.textContent = normalStrength; };
-displacementScaleSlider.oninput = () => { displacementScale = parseFloat(displacementScaleSlider.value); displacementScaleValueSpan.textContent = displacementScale; };
-heightBlurFactorSlider.oninput = () => { heightBlurFactor = parseFloat(heightBlurFactorSlider.value); heightBlurFactorValueSpan.textContent = heightBlurFactor; };
-sminSmoothingSlider.oninput = () => { sminSmoothing = parseFloat(sminSmoothingSlider.value); sminSmoothingValueSpan.textContent = sminSmoothing; }; // New handler
-blurRadiusSlider.oninput = () => { blurRadius = parseFloat(blurRadiusSlider.value); blurRadiusValueSpan.textContent = blurRadius; }; // New handler
-highlightWidthSlider.oninput = () => { highlightWidth = parseFloat(highlightWidthSlider.value); highlightWidthValueSpan.textContent = highlightWidth; }; // New handler
-showNormalsCheckbox.onchange = () => { showNormals = showNormalsCheckbox.checked; };
+let glassWidth = 150;
+let glassHeight = 170;
+let cornerRadius = 32;
+let ior = 1.1;
+let glassThickness = 41;
+let normalStrength = 6.4;
+let displacementScale = 1.0;
+let heightBlurFactor = 8.0;
+let sminSmoothing = 20.0;
+let blurRadius = 0.0;
+let highlightWidth = 3.5;
+let showNormals = false;
 
 
-// --- Mouse Position ---
-let mouseX = window.innerWidth / 2;
-let mouseY = window.innerHeight / 2;
 
-let isDragging = false; // New: Flag to track if the glass is being dragged
 
-canvas.addEventListener('mousedown', (event) => {
-    if (event.button === 0) { // Left mouse button
+// ========== 鼠标交互处理 ==========
+// 玻璃容器的位置坐标，初始化为屏幕中心
+let glassX = window.innerWidth / 2;
+let glassY = window.innerHeight / 2;
+
+// 拖拽状态标志，用于跟踪玻璃是否正在被拖拽
+let isDragging = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+// 鼠标按下事件：开始拖拽
+glassContainer.addEventListener('mousedown', (event) => {
+    if (event.button === 0) { // 检查是否为鼠标左键
         isDragging = true;
+        
+        // 计算鼠标相对于玻璃容器的偏移
+        const rect = glassContainer.getBoundingClientRect();
+        dragOffsetX = event.clientX - rect.left - rect.width / 2;
+        dragOffsetY = event.clientY - rect.top - rect.height / 2;
+        
+        event.preventDefault();
     }
 });
 
-canvas.addEventListener('mouseup', () => {
+// 鼠标释放事件：停止拖拽
+document.addEventListener('mouseup', () => {
     isDragging = false;
 });
 
-canvas.addEventListener('mouseleave', () => {
-    isDragging = false; // Stop dragging if mouse leaves the canvas
-});
-
-canvas.addEventListener('mousemove', (event) => {
+// 鼠标移动事件：更新玻璃位置
+document.addEventListener('mousemove', (event) => {
     if (isDragging) {
-        mouseX = event.clientX;
-        mouseY = event.clientY;
+        // 计算新的玻璃中心位置
+        glassX = event.clientX - dragOffsetX;
+        glassY = event.clientY - dragOffsetY;
+        
+        // 更新玻璃容器的位置
+        glassContainer.style.left = glassX - glassWidth / 2 + 'px';
+        glassContainer.style.top = glassY - glassHeight / 2 + 'px';
+        glassContainer.style.transform = 'none'; // 移除居中变换
+        
+        // 触发截图更新
+        updateScreenshot();
     }
 });
 
-// --- Shaders ---
+// ========== 着色器程序 ==========
+// 顶点着色器源码：负责处理顶点位置变换
 const vsSource = `
     precision mediump float;
-    attribute vec2 a_position; // Quad vertices (-0.5 to 0.5)
+    
+    // 输入属性：顶点位置（四边形顶点，范围-0.5到0.5）
+    attribute vec2 a_position;
 
-    uniform vec2 u_resolution;
-    uniform vec2 u_mousePos;   // Center of glass in pixels
-    uniform vec2 u_glassSize;  // Size of glass in pixels
+    // 统一变量：从JavaScript传入的参数
+    uniform vec2 u_resolution;  // 屏幕分辨率
+    uniform vec2 u_mousePos;    // 玻璃中心位置（像素坐标）
+    uniform vec2 u_glassSize;   // 玻璃尺寸（像素）
 
-    varying vec2 v_screenTexCoord; // Texture coordinate for background sampling (0-1 screen space)
-    varying vec2 v_shapeCoord;     // Coordinate relative to glass center, normalized (-0.5 to 0.5)
+    // 输出变量：传递给片段着色器的插值数据
+    varying vec2 v_screenTexCoord; // 屏幕纹理坐标（0-1范围）
+    varying vec2 v_shapeCoord;     // 相对于玻璃中心的归一化坐标（-0.5到0.5）
 
     void main() {
+        // 计算顶点在屏幕上的实际像素位置
         vec2 screenPos = u_mousePos + a_position * u_glassSize;
+        
+        // 将屏幕坐标转换为WebGL的裁剪空间坐标（-1到1）
         vec2 clipSpacePos = (screenPos / u_resolution) * 2.0 - 1.0;
+        
+        // 设置最终顶点位置，Y轴翻转以匹配屏幕坐标系
         gl_Position = vec4(clipSpacePos * vec2(1.0, -1.0), 0.0, 1.0);
+        
+        // 计算用于采样背景纹理的坐标
         v_screenTexCoord = screenPos / u_resolution;
-        v_screenTexCoord.y = 1.0 - v_screenTexCoord.y;
+        v_screenTexCoord.y = 1.0 - v_screenTexCoord.y; // 翻转Y轴
+        
+        // 传递形状坐标给片段着色器
         v_shapeCoord = a_position;
     }
 `;
 
+// 片段着色器源码：负责计算每个像素的颜色
 const fsSource = `
     precision mediump float;
 
-    uniform sampler2D u_backgroundTexture;
-    uniform vec2 u_resolution;
-    uniform vec2 u_glassSize;
-    uniform float u_cornerRadius;
-    uniform float u_ior;
-    uniform float u_glassThickness;
-    uniform float u_normalStrength;
-    uniform float u_displacementScale;
-    uniform float u_heightTransitionWidth; // Renamed from u_heightBlurFactor for clarity
-    uniform float u_sminSmoothing;     // New: SDF smoothing factor k
-    uniform int u_showNormals;
-    uniform float u_blurRadius;        // New: Blur radius for frosted glass effect
-    uniform vec4 u_overlayColor;       // New: Overlay color for the glass (e.g., subtle white)
-    uniform float u_highlightWidth;    // New: Width of the white highlight at the edge
+    // 统一变量：从JavaScript传入的参数
+    uniform sampler2D u_backgroundTexture; // 背景纹理
+    uniform vec2 u_resolution;             // 屏幕分辨率
+    uniform vec2 u_glassSize;              // 玻璃尺寸
+    uniform float u_cornerRadius;          // 圆角半径
+    uniform float u_ior;                   // 折射率（Index of Refraction）
+    uniform float u_glassThickness;        // 玻璃厚度
+    uniform float u_normalStrength;        // 法线强度
+    uniform float u_displacementScale;     // 位移缩放
+    uniform float u_heightTransitionWidth; // 高度过渡宽度
+    uniform float u_sminSmoothing;         // SDF平滑因子
+    uniform int u_showNormals;             // 是否显示法线
+    uniform float u_blurRadius;            // 模糊半径（毛玻璃效果）
+    uniform vec4 u_overlayColor;           // 叠加颜色
+    uniform float u_highlightWidth;        // 高光宽度
 
-    varying vec2 v_screenTexCoord;
-    varying vec2 v_shapeCoord;
+    // 从顶点着色器传入的插值变量
+    varying vec2 v_screenTexCoord; // 屏幕纹理坐标
+    varying vec2 v_shapeCoord;     // 形状坐标
 
     // Polynomial smooth min (quartic)
     // k controls the smoothness/radius of the blend
@@ -315,11 +322,25 @@ const bgFsSource = `
     }
 `;
 
-// --- WebGL Setup ---
+// ========== WebGL 着色器和程序设置 ==========
+/**
+ * 创建并编译着色器的辅助函数
+ * @param {WebGLRenderingContext} gl - WebGL上下文
+ * @param {number} type - 着色器类型（顶点或片段着色器）
+ * @param {string} source - 着色器源代码
+ * @returns {WebGLShader|null} 编译后的着色器对象
+ */
 function createShader(gl, type, source) {
+    // 创建着色器对象
     const shader = gl.createShader(type);
+    
+    // 设置着色器源代码
     gl.shaderSource(shader, source);
+    
+    // 编译着色器
     gl.compileShader(shader);
+    
+    // 检查编译是否成功
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
         console.error(`Shader compile error (${type === gl.VERTEX_SHADER ? 'VS' : 'FS'}):`, gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
@@ -328,31 +349,27 @@ function createShader(gl, type, source) {
     return shader;
 }
 
+// 创建玻璃效果的着色器
 const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
 const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
 
+// 创建着色器程序并链接着色器
 const program = gl.createProgram();
-gl.attachShader(program, vertexShader);
-gl.attachShader(program, fragmentShader);
-gl.linkProgram(program);
+gl.attachShader(program, vertexShader);    // 附加顶点着色器
+gl.attachShader(program, fragmentShader);  // 附加片段着色器
+gl.linkProgram(program);                   // 链接程序
 
+// 检查程序链接是否成功
 if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
     console.error('Program link error:', gl.getProgramInfoLog(program));
     throw new Error('Program link error');
 }
 
-const bgVertexShader = createShader(gl, gl.VERTEX_SHADER, bgVsSource);
-const bgFragmentShader = createShader(gl, gl.FRAGMENT_SHADER, bgFsSource);
-const bgProgram = gl.createProgram();
-gl.attachShader(bgProgram, bgVertexShader);
-gl.attachShader(bgProgram, bgFragmentShader);
-gl.linkProgram(bgProgram);
-if (!gl.getProgramParameter(bgProgram, gl.LINK_STATUS)) {
-    console.error('Background Program link error:', gl.getProgramInfoLog(bgProgram));
-    throw new Error('Background Program link error');
-}
 
-// --- Attribute and Uniform Locations ---
+
+// ========== 获取着色器变量位置 ==========
+// 获取玻璃着色器程序中的attribute和uniform变量位置
+// 这些位置用于后续向着色器传递数据
 const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
 const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
 const mousePosUniformLocation = gl.getUniformLocation(program, 'u_mousePos');
@@ -363,119 +380,189 @@ const iorUniformLocation = gl.getUniformLocation(program, 'u_ior');
 const glassThicknessUniformLocation = gl.getUniformLocation(program, 'u_glassThickness');
 const normalStrengthUniformLocation = gl.getUniformLocation(program, 'u_normalStrength');
 const displacementScaleUniformLocation = gl.getUniformLocation(program, 'u_displacementScale');
-const heightTransitionWidthUniformLocation = gl.getUniformLocation(program, 'u_heightTransitionWidth'); // Renamed
-const sminSmoothingUniformLocation = gl.getUniformLocation(program, 'u_sminSmoothing'); // New
+const heightTransitionWidthUniformLocation = gl.getUniformLocation(program, 'u_heightTransitionWidth');
+const sminSmoothingUniformLocation = gl.getUniformLocation(program, 'u_sminSmoothing');
 const showNormalsUniformLocation = gl.getUniformLocation(program, 'u_showNormals');
-const blurRadiusUniformLocation = gl.getUniformLocation(program, 'u_blurRadius'); // New
-const overlayColorUniformLocation = gl.getUniformLocation(program, 'u_overlayColor'); // New
-const highlightWidthUniformLocation = gl.getUniformLocation(program, 'u_highlightWidth'); // New
+const blurRadiusUniformLocation = gl.getUniformLocation(program, 'u_blurRadius');
+const overlayColorUniformLocation = gl.getUniformLocation(program, 'u_overlayColor');
+const highlightWidthUniformLocation = gl.getUniformLocation(program, 'u_highlightWidth');
 
-const bgPositionAttributeLocation = gl.getAttribLocation(bgProgram, 'a_position');
-const bgBackgroundTextureUniformLocation = gl.getUniformLocation(bgProgram, 'u_backgroundTexture');
 
-// --- Geometry ---
+
+// ========== 几何体数据设置 ==========
+// 玻璃四边形的顶点坐标（两个三角形组成一个矩形）
+// 坐标范围从-0.5到0.5，后续会在着色器中缩放到实际尺寸
 const positions = [ -0.5,-0.5, 0.5,-0.5, -0.5,0.5, -0.5,0.5, 0.5,-0.5, 0.5,0.5 ];
-const positionBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+const positionBuffer = gl.createBuffer();                                    // 创建顶点缓冲区
+gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);                             // 绑定缓冲区
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW); // 上传顶点数据
 
-const bgPositions = [ -1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1 ];
-const bgPositionBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, bgPositionBuffer);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bgPositions), gl.STATIC_DRAW);
 
-// --- Texture ---
-let backgroundTextureGL = gl.createTexture(); // Renamed to avoid conflict
+
+// ========== 纹理设置 ==========
+// 创建背景纹理对象
+let backgroundTextureGL = gl.createTexture();
 gl.bindTexture(gl.TEXTURE_2D, backgroundTextureGL);
-gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
+// 创建一个1x1像素的蓝色占位纹理，在真实图片加载前使用
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
+
+// 设置纹理参数
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); // S轴（水平）边缘处理
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); // T轴（垂直）边缘处理
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);     // 缩小时的过滤方式
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);     // 放大时的过滤方式
+
+/**
+ * 加载图片并创建WebGL纹理的函数
+ * @param {string} url - 图片的URL路径
+ */
 function loadTexture(url) {
     const image = new Image();
-    image.crossOrigin = "anonymous"; // For picsum or other CORS images
     image.src = url;
+    
+    // 图片加载完成后的回调函数
     image.onload = () => {
+        // 绑定纹理对象
         gl.bindTexture(gl.TEXTURE_2D, backgroundTextureGL);
+        
+        // 设置像素存储格式（翻转Y轴以匹配WebGL坐标系）
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        
+        // 将图片数据上传到GPU纹理
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        
+        // 根据图片尺寸设置纹理参数
         if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+           // 如果图片尺寸是2的幂次方，生成mipmap以提高渲染质量
            gl.generateMipmap(gl.TEXTURE_2D);
         } else {
+           // 如果不是2的幂次方，设置边缘处理和过滤方式
            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         }
     };
+    
+    // 图片加载失败的错误处理
     image.onerror = () => { console.error("Failed to load image:", url); }
 }
 
-function isPowerOf2(value) { return (value & (value - 1)) === 0; }
+/**
+ * 检查一个数是否为2的幂次方
+ * @param {number} value - 要检查的数值
+ * @returns {boolean} 是否为2的幂次方
+ */
+function isPowerOf2(value) { 
+    return (value & (value - 1)) === 0; 
+}
 
-imageUpload.onchange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => { loadTexture(e.target.result); }
-        reader.readAsDataURL(file);
+// 加载背景图片
+loadTexture('background.png');
+
+// ========== 页面截图功能 ==========
+/**
+ * 更新截图：截取玻璃容器覆盖的页面区域
+ */
+async function updateScreenshot() {
+    try {
+        // 获取玻璃容器的位置和尺寸
+        const rect = glassContainer.getBoundingClientRect();
+        
+        // 使用html2canvas截取整个页面
+        const fullPageCanvas = await html2canvas(document.body, {
+            useCORS: true,
+            allowTaint: true,
+            scale: 1,
+            width: window.innerWidth,
+            height: window.innerHeight
+        });
+        
+        // 设置截图canvas的尺寸
+        screenshotCanvas.width = glassWidth;
+        screenshotCanvas.height = glassHeight;
+        
+        // 获取截图canvas的2D上下文
+        const ctx = screenshotCanvas.getContext('2d');
+        
+        // 从完整页面截图中提取玻璃覆盖的区域
+        ctx.drawImage(
+            fullPageCanvas,
+            rect.left, rect.top, glassWidth, glassHeight, // 源区域
+            0, 0, glassWidth, glassHeight                   // 目标区域
+        );
+        
+        // 将截图上传到WebGL纹理
+        gl.bindTexture(gl.TEXTURE_2D, backgroundTextureGL);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, screenshotCanvas);
+        
+        // 设置纹理参数
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        
+    } catch (error) {
+        console.error('截图失败:', error);
     }
-};
-loadTexture('https://picsum.photos/1920/1080?random=' + Math.floor(Math.random()*100));
+}
 
+// 初始截图
+setTimeout(() => {
+    updateScreenshot();
+}, 100); // 延迟一点确保页面完全加载
 
-// --- Render Loop ---
+// ========== 渲染循环 ==========
+/**
+ * 主渲染函数：每帧调用一次，负责绘制整个场景
+ */
 function render() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // 设置画布尺寸为玻璃容器大小
+    canvas.width = glassWidth;
+    canvas.height = glassHeight;
+    
+    // 设置WebGL视口（渲染区域）
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    gl.clearColor(0.1, 0.1, 0.1, 1);
+    // 设置清除颜色为透明，并清除颜色缓冲区
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // --- Draw Background ---
-    gl.useProgram(bgProgram);
-    gl.bindBuffer(gl.ARRAY_BUFFER, bgPositionBuffer);
-    gl.enableVertexAttribArray(bgPositionAttributeLocation);
-    gl.vertexAttribPointer(bgPositionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, backgroundTextureGL);
-    gl.uniform1i(bgBackgroundTextureUniformLocation, 0);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-    // --- Draw Glass ---
+    // ========== 绘制玻璃效果 ==========
+    // 使用玻璃效果着色器程序
     gl.useProgram(program);
+    
+    // 绑定玻璃四边形的顶点缓冲区
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.enableVertexAttribArray(positionAttributeLocation);
     gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-    gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
-    gl.uniform2f(mousePosUniformLocation, mouseX, mouseY);
-    gl.uniform2f(glassSizeUniformLocation, glassWidth, glassHeight);
-    gl.uniform1f(cornerRadiusUniformLocation, cornerRadius);
-    gl.uniform1f(iorUniformLocation, ior);
-    gl.uniform1f(glassThicknessUniformLocation, glassThickness);
-    gl.uniform1f(normalStrengthUniformLocation, normalStrength);
-    gl.uniform1f(displacementScaleUniformLocation, displacementScale);
-    gl.uniform1f(heightTransitionWidthUniformLocation, heightBlurFactor); // heightBlurFactor now directly controls pixel width
-    gl.uniform1f(sminSmoothingUniformLocation, sminSmoothing); // New
-    gl.uniform1i(showNormalsUniformLocation, showNormals ? 1 : 0);
-    gl.uniform1f(blurRadiusUniformLocation, blurRadius); // New
-    gl.uniform4f(overlayColorUniformLocation, 1.0, 1.0, 1.0, 1.0); // White color for overlay
-    gl.uniform1f(highlightWidthUniformLocation, highlightWidth); // New
+    // 向着色器传递各种参数
+    gl.uniform2f(resolutionUniformLocation, glassWidth, glassHeight);            // 玻璃分辨率
+    gl.uniform2f(mousePosUniformLocation, glassWidth/2, glassHeight/2);          // 玻璃中心（相对于自身）
+    gl.uniform2f(glassSizeUniformLocation, glassWidth, glassHeight);             // 玻璃尺寸
+    gl.uniform1f(cornerRadiusUniformLocation, cornerRadius);                     // 圆角半径
+    gl.uniform1f(iorUniformLocation, ior);                                       // 折射率
+    gl.uniform1f(glassThicknessUniformLocation, glassThickness);                 // 玻璃厚度
+    gl.uniform1f(normalStrengthUniformLocation, normalStrength);                 // 法线强度
+    gl.uniform1f(displacementScaleUniformLocation, displacementScale);           // 位移缩放
+    gl.uniform1f(heightTransitionWidthUniformLocation, heightBlurFactor);        // 高度过渡宽度
+    gl.uniform1f(sminSmoothingUniformLocation, sminSmoothing);                   // SDF平滑因子
+    gl.uniform1i(showNormalsUniformLocation, showNormals ? 1 : 0);               // 是否显示法线
+    gl.uniform1f(blurRadiusUniformLocation, blurRadius);                         // 模糊半径
+    gl.uniform4f(overlayColorUniformLocation, 1.0, 1.0, 1.0, 1.0);              // 叠加颜色（白色）
+    gl.uniform1f(highlightWidthUniformLocation, highlightWidth);                 // 高光宽度
 
+    // 绑定截图纹理供玻璃着色器使用（用于折射效果）
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, backgroundTextureGL);
     gl.uniform1i(backgroundTextureUniformLocation, 0);
 
-    // Enable blending for a nicer glass effect if desired
-    // gl.enable(gl.BLEND);
-    // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // 绘制玻璃效果（6个顶点组成2个三角形）
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-    // gl.disable(gl.BLEND);
 
-
+    // 请求下一帧动画（创建渲染循环）
     requestAnimationFrame(render);
 }
 
